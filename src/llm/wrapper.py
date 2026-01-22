@@ -4,31 +4,18 @@ LLM Wrapper Module
 Provides a wrapper class for the MLX-LM inference engine.
 """
 
-from typing import Optional, Callable
+from typing import Optional, Callable, List, Dict
 import mlx_lm
 from mlx_lm.sample_utils import make_sampler
 
 from src.config import MODEL_ID, MAX_TOKENS, TEMPERATURE, TOP_P
 
 
-SEARCH_PROMPT_TEMPLATE = (
+SYSTEM_PROMPT = (
     "You are Pixie, a friendly and helpful female Yorkshire Terrier AI assistant. "
     "You're small but mighty, loyal, and always ready to help your human! "
     "You have a warm, cheerful personality. "
-    "Answer based on the search context provided. Be helpful and informative.\n\n"
-    "Context from web search:\n{context}\n\n"
-    "Human's Question: {question}\n\n"
-    "Pixie:"
-)
-
-
-DIRECT_PROMPT_TEMPLATE = (
-    "You are Pixie, a friendly and helpful female Yorkshire Terrier AI assistant. "
-    "You're small but mighty, loyal, and always ready to help your human! "
-    "You have a warm, cheerful personality. "
-    "Be helpful and informative.\n\n"
-    "Human: {question}\n\n"
-    "Pixie:"
+    "Be helpful and informative."
 )
 
 
@@ -36,7 +23,7 @@ class LLMWrapper:
     """
     Wrapper class for MLX-LM model inference.
     
-    Handles model loading, prompt formatting, and text generation.
+    Handles model loading, prompt formatting, and text generation with conversation memory.
     """
     
     def __init__(self, model_id: str = MODEL_ID):
@@ -50,6 +37,7 @@ class LLMWrapper:
         self.model = None
         self.tokenizer = None
         self._loaded = False
+        self.conversation_history: List[Dict[str, str]] = []
     
     def load(self) -> None:
         """
@@ -71,9 +59,13 @@ class LLMWrapper:
         """Check if the model is loaded."""
         return self._loaded
     
+    def clear_history(self) -> None:
+        """Clear the conversation history."""
+        self.conversation_history = []
+    
     def _build_prompt(self, question: str, context: Optional[str] = None) -> str:
         """
-        Build the prompt for the model.
+        Build the prompt for the model with conversation history.
         
         Args:
             question: User's question.
@@ -82,9 +74,29 @@ class LLMWrapper:
         Returns:
             Formatted prompt string.
         """
+        # Build conversation with history
+        prompt_parts = [SYSTEM_PROMPT + "\n"]
+        
+        # Add search context if available
         if context:
-            return SEARCH_PROMPT_TEMPLATE.format(context=context, question=question)
-        return DIRECT_PROMPT_TEMPLATE.format(question=question)
+            prompt_parts.append(f"\nContext from web search:\n{context}\n")
+        
+        # Add conversation history (limit to last 10 exchanges to avoid token limits)
+        for msg in self.conversation_history[-20:]:  # Last 10 user + 10 assistant messages
+            if msg["role"] == "user":
+                prompt_parts.append(f"\nHuman: {msg['content']}")
+            else:
+                prompt_parts.append(f"\nPixie: {msg['content']}")
+        
+        # Add current question
+        prompt_parts.append(f"\nHuman: {question}")
+        prompt_parts.append("\nPixie:")
+        
+        return "".join(prompt_parts)
+    
+    def add_to_history(self, role: str, content: str) -> None:
+        """Add a message to conversation history."""
+        self.conversation_history.append({"role": role, "content": content})
     
     def generate(
         self,

@@ -68,12 +68,7 @@ def search_and_format(query: str, max_results: int = MAX_SEARCH_RESULTS) -> Opti
     Returns:
         Formatted search results string, or None if search failed.
     """
-    print(f"[DEBUG] search_and_format called with query: '{query}'")
     results = search_web(query, max_results)
-    print(f"[DEBUG] Got {len(results)} results from search_web")
     if results:
-        formatted = format_search_results(results)
-        print(f"[DEBUG] Formatted results length: {len(formatted)} chars")
-        return formatted
-    print("[DEBUG] No results, returning None")
+        return format_search_results(results)
     return None

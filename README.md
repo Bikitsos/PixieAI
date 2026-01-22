@@ -2,6 +2,7 @@
 
 A local AI assistant for macOS powered by MLX and Gemma, with optional internet search.
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.14+-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS%20(Apple%20Silicon)-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -14,6 +15,7 @@ A local AI assistant for macOS powered by MLX and Gemma, with optional internet 
 - 💾 **Memory Efficient** - 4-bit quantization fits in <16GB RAM
 - 🔒 **Private** - All processing happens locally on your Mac
 - ⚡ **Streaming** - Real-time token-by-token responses
+- 💬 **Conversation Memory** - Remembers chat context within session
 
 ## Screenshots
 
@@ -79,13 +81,15 @@ PixieAI/
 ├── src/
 │   ├── app.py           # Application launcher
 │   ├── config.py        # Configuration settings
+│   ├── version.py       # Version information
 │   ├── gui/
 │   │   ├── main_window.py   # Chatbot UI with message bubbles
 │   │   └── worker.py        # Background thread for LLM
 │   ├── llm/
-│   │   └── wrapper.py       # MLX LLM wrapper
+│   │   └── wrapper.py       # MLX LLM wrapper with conversation memory
 │   └── search/
 │       └── __init__.py      # DuckDuckGo search
+├── hooks/                   # PyInstaller hooks for MLX
 ├── pyproject.toml
 └── ROADMAP.md
 ```
@@ -105,6 +109,16 @@ Edit `src/config.py` to customize:
 - **Gemma 2 9B (4-bit)** - Google's efficient language model
 - **PyQt6** - Cross-platform GUI framework
 - **ddgs** - DuckDuckGo search API
+
+## Changelog
+
+### v1.0.0
+- Initial release
+- Chatbot-style UI with message bubbles
+- Conversation memory within session
+- Web search integration
+- Streaming responses
+- macOS .app bundle support
 
 ## License
 

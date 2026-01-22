@@ -124,6 +124,7 @@ class MainWindow(QMainWindow):
         self.llm = LLMWrapper()
         self.worker = None
         self.current_bubble = None
+        self.current_question = ""
         self.is_streaming = False
         
         self._setup_ui()
@@ -352,6 +353,12 @@ class MainWindow(QMainWindow):
         if not question or self.is_streaming:
             return
         
+        # Store question for history
+        self.current_question = question
+        
+        # Add user message to history
+        self.llm.add_to_history("user", question)
+        
         # Disable input
         self.input_field.setEnabled(False)
         self.send_button.setEnabled(False)
@@ -391,6 +398,10 @@ class MainWindow(QMainWindow):
     def _on_generation_complete(self, response: str):
         """Handle generation completion."""
         self._end_bot_message()
+        
+        # Add assistant response to history
+        self.llm.add_to_history("assistant", response)
+        
         self.status_label.setText("Online • Ready to chat")
         self.status_label.setStyleSheet("color: #34C759;")
         self.input_field.setEnabled(True)
