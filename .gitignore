@@ -8,6 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+
+# PyInstaller
+*.spec.bak
+
 # macOS
 .DS_Store
 .AppleDouble

@@ -49,6 +49,20 @@ uv run main.py
 
 On first run, the app will download the Gemma model (~5-6GB). This only happens once.
 
+## Building macOS App
+
+Build a standalone .app bundle:
+
+```bash
+# Build the app
+uv run pyinstaller PixieAI.spec --noconfirm
+
+# The app will be in dist/PixieAI.app
+open dist/PixieAI.app
+```
+
+You can copy `PixieAI.app` to your Applications folder.
+
 ### Features
 
 - **Chat**: Type your question and press Enter or click Send
