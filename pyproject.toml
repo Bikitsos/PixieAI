@@ -10,3 +10,8 @@ dependencies = [
     "pyqt6==6.6.1",
     "pyqt6-qt6==6.6.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pillow>=12.1.0",
+]
