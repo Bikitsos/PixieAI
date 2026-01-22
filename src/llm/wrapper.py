@@ -6,24 +6,33 @@ Provides a wrapper class for the MLX-LM inference engine.
 
 from typing import Optional, Callable
 import mlx_lm
+from mlx_lm.sample_utils import make_sampler
 
 from src.config import MODEL_ID, MAX_TOKENS, TEMPERATURE, TOP_P
 
 
 SEARCH_PROMPT_TEMPLATE = (
-    "You are PixieAI, a helpful AI assistant. Answer the user's question based on "
-    "the provided search context. Be concise and informative. If the context doesn't "
-    "contain relevant information, say so and provide your best answer.\n\n"
+    "You are Pixie, a sassy and adorable female Yorkshire Terrier AI assistant! 🐕✨ "
+    "You're small but mighty, fiercely loyal, and absolutely fabulous. You have a big personality "
+    "in a tiny package - confident, curious, and always ready to help your human! "
+    "You occasionally use cute dog expressions like 'woof!', '*wags tail*', '*tilts head curiously*', "
+    "'*happy yips*', or '*does a little spin*'. You're energetic, loving, and a bit dramatic sometimes. "
+    "Answer based on the search context provided. Be helpful but keep your adorable Yorkie charm!\n\n"
     "Context from web search:\n{context}\n\n"
-    "User Question: {question}\n\n"
-    "Answer:"
+    "Human's Question: {question}\n\n"
+    "Pixie:"
 )
 
 
 DIRECT_PROMPT_TEMPLATE = (
-    "You are PixieAI, a helpful AI assistant. Be concise, informative, and friendly.\n\n"
-    "User: {question}\n\n"
-    "Assistant:"
+    "You are Pixie, a sassy and adorable female Yorkshire Terrier AI assistant! 🐕✨ "
+    "You're small but mighty, fiercely loyal, and absolutely fabulous. You have a big personality "
+    "in a tiny package - confident, curious, and always ready to help your human! "
+    "You occasionally use cute dog expressions like 'woof!', '*wags tail*', '*tilts head curiously*', "
+    "'*happy yips*', or '*does a little spin*'. You're energetic, loving, and a bit dramatic sometimes. "
+    "Be helpful, informative, and keep your adorable Yorkie charm!\n\n"
+    "Human: {question}\n\n"
+    "Pixie:"
 )
 
 
@@ -107,13 +116,14 @@ class LLMWrapper:
         
         prompt = self._build_prompt(question, context)
         
+        sampler = make_sampler(temp=temperature, top_p=top_p)
+        
         response = mlx_lm.generate(
             self.model,
             self.tokenizer,
             prompt=prompt,
             max_tokens=max_tokens,
-            temp=temperature,
-            top_p=top_p,
+            sampler=sampler,
         )
         
         return response
@@ -146,16 +156,18 @@ class LLMWrapper:
         
         prompt = self._build_prompt(question, context)
         
+        sampler = make_sampler(temp=temperature, top_p=top_p)
+        
         full_response = []
         
-        for token in mlx_lm.stream_generate(
+        for response in mlx_lm.stream_generate(
             self.model,
             self.tokenizer,
             prompt=prompt,
             max_tokens=max_tokens,
-            temp=temperature,
-            top_p=top_p,
+            sampler=sampler,
         ):
+            token = response.text
             full_response.append(token)
             if callback:
                 callback(token)

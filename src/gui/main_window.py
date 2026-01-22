@@ -1,13 +1,13 @@
 """
 Main Window Module
 
-Native macOS-styled chat interface for PixieAI.
+Native macOS-styled chatbot interface for PixieAI.
 """
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTextEdit, QLineEdit, QPushButton, QCheckBox,
-    QLabel, QFrame, QScrollArea
+    QLabel, QFrame, QScrollArea, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette, QKeySequence, QShortcut, QTextCursor
@@ -16,70 +16,27 @@ from src.llm import LLMWrapper
 from src.gui.worker import WorkerThread
 
 
-class ChatBubble(QFrame):
-    """A chat bubble widget for messages."""
-    
-    def __init__(self, text: str, is_user: bool = False, parent=None):
-        super().__init__(parent)
-        self.setFrameShape(QFrame.Shape.NoFrame)
-        
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 8)
-        
-        label = QLabel(text)
-        label.setWordWrap(True)
-        label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        
-        if is_user:
-            self.setStyleSheet("""
-                ChatBubble {
-                    background-color: #007AFF;
-                    border-radius: 16px;
-                    margin-left: 60px;
-                    margin-right: 8px;
-                }
-                QLabel {
-                    color: white;
-                    font-size: 14px;
-                }
-            """)
-        else:
-            self.setStyleSheet("""
-                ChatBubble {
-                    background-color: #E9E9EB;
-                    border-radius: 16px;
-                    margin-left: 8px;
-                    margin-right: 60px;
-                }
-                QLabel {
-                    color: #1C1C1E;
-                    font-size: 14px;
-                }
-            """)
-        
-        layout.addWidget(label)
-
-
 class MainWindow(QMainWindow):
     """
-    Main application window with native macOS styling.
+    Main chatbot window with native macOS styling.
     """
     
     def __init__(self):
         super().__init__()
         
-        self.setWindowTitle("PixieAI")
-        self.setMinimumSize(600, 700)
-        self.resize(700, 800)
+        self.setWindowTitle("Pixie 🐕")
+        self.setMinimumSize(500, 600)
+        self.resize(600, 750)
         
         # Initialize LLM (lazy loading)
         self.llm = LLMWrapper()
         self.worker = None
         self.current_response = ""
+        self.is_streaming = False
         
         self._setup_ui()
         self._setup_shortcuts()
-        self._apply_macos_style()
+        self._apply_style()
     
     def _setup_ui(self):
         """Set up the user interface."""
@@ -92,206 +49,258 @@ class MainWindow(QMainWindow):
         
         # Header
         header = QFrame()
-        header.setFixedHeight(60)
-        header.setStyleSheet("""
-            QFrame {
-                background-color: #F5F5F7;
-                border-bottom: 1px solid #D1D1D6;
-            }
-        """)
+        header.setFixedHeight(70)
+        header.setObjectName("header")
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(20, 0, 20, 0)
         
-        title_label = QLabel("✨ PixieAI")
-        title_label.setStyleSheet("""
-            font-size: 20px;
-            font-weight: 600;
-            color: #1C1C1E;
-        """)
-        header_layout.addWidget(title_label)
+        # Avatar and title
+        avatar_label = QLabel("🐕")
+        avatar_label.setStyleSheet("font-size: 32px;")
+        header_layout.addWidget(avatar_label)
+        
+        title_layout = QVBoxLayout()
+        title_layout.setSpacing(2)
+        
+        title_label = QLabel("Pixie")
+        title_label.setObjectName("titleLabel")
+        title_layout.addWidget(title_label)
+        
+        self.status_label = QLabel("Online • Ready to chat")
+        self.status_label.setObjectName("statusLabel")
+        title_layout.addWidget(self.status_label)
+        
+        header_layout.addLayout(title_layout)
         header_layout.addStretch()
         
-        # Status label
-        self.status_label = QLabel("Ready")
-        self.status_label.setStyleSheet("""
-            font-size: 12px;
-            color: #8E8E93;
-        """)
-        header_layout.addWidget(self.status_label)
+        # Search toggle in header
+        self.search_checkbox = QCheckBox("🌐 Web Search")
+        self.search_checkbox.setObjectName("searchToggle")
+        header_layout.addWidget(self.search_checkbox)
         
         layout.addWidget(header)
         
         # Chat area
         self.chat_area = QTextEdit()
         self.chat_area.setReadOnly(True)
-        self.chat_area.setStyleSheet("""
-            QTextEdit {
-                background-color: #FFFFFF;
-                border: none;
-                font-size: 14px;
-                padding: 16px;
-                line-height: 1.5;
-            }
-        """)
-        self.chat_area.setFont(QFont("SF Pro", 14))
+        self.chat_area.setObjectName("chatArea")
+        self.chat_area.setFont(QFont(".AppleSystemUIFont", 14))
         layout.addWidget(self.chat_area, 1)
         
         # Input area
         input_frame = QFrame()
-        input_frame.setStyleSheet("""
-            QFrame {
-                background-color: #F5F5F7;
-                border-top: 1px solid #D1D1D6;
-            }
-        """)
-        input_layout = QVBoxLayout(input_frame)
-        input_layout.setContentsMargins(16, 12, 16, 12)
+        input_frame.setObjectName("inputFrame")
+        input_layout = QHBoxLayout(input_frame)
+        input_layout.setContentsMargins(16, 16, 16, 16)
         input_layout.setSpacing(12)
         
-        # Search toggle row
-        toggle_layout = QHBoxLayout()
-        self.search_checkbox = QCheckBox("🔍 Enable Internet Search")
-        self.search_checkbox.setStyleSheet("""
-            QCheckBox {
-                font-size: 13px;
-                color: #3C3C43;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-        """)
-        toggle_layout.addWidget(self.search_checkbox)
-        toggle_layout.addStretch()
-        input_layout.addLayout(toggle_layout)
-        
-        # Text input row
-        text_input_layout = QHBoxLayout()
-        text_input_layout.setSpacing(12)
-        
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Ask me anything...")
-        self.input_field.setStyleSheet("""
-            QLineEdit {
-                background-color: #FFFFFF;
-                border: 1px solid #D1D1D6;
-                border-radius: 20px;
-                padding: 12px 16px;
-                font-size: 14px;
-                color: #1C1C1E;
-            }
-            QLineEdit:focus {
-                border-color: #007AFF;
-            }
-        """)
+        self.input_field.setPlaceholderText("Message Pixie...")
+        self.input_field.setObjectName("inputField")
         self.input_field.returnPressed.connect(self._on_send)
-        text_input_layout.addWidget(self.input_field, 1)
+        input_layout.addWidget(self.input_field, 1)
         
-        self.send_button = QPushButton("Send")
-        self.send_button.setStyleSheet("""
-            QPushButton {
-                background-color: #007AFF;
-                color: white;
-                border: none;
-                border-radius: 20px;
-                padding: 12px 24px;
-                font-size: 14px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #0056CC;
-            }
-            QPushButton:pressed {
-                background-color: #004499;
-            }
-            QPushButton:disabled {
-                background-color: #B4B4B4;
-            }
-        """)
+        self.send_button = QPushButton("➤")
+        self.send_button.setObjectName("sendButton")
+        self.send_button.setFixedSize(44, 44)
         self.send_button.clicked.connect(self._on_send)
-        text_input_layout.addWidget(self.send_button)
+        input_layout.addWidget(self.send_button)
         
-        input_layout.addLayout(text_input_layout)
         layout.addWidget(input_frame)
         
         # Welcome message
-        self._append_message("assistant", "Hello! I'm PixieAI, your local AI assistant powered by Gemma. How can I help you today?\n\n💡 Tip: Enable \"Internet Search\" to get up-to-date information from the web.")
+        self._add_bot_message("*wags tail excitedly* 🐕✨\n\nWoof! Hi there, human! I'm Pixie, your adorable Yorkshire Terrier AI!\n\nI'm small but mighty - ask me anything and I'll fetch the best answer! Enable 🌐 Web Search for the latest info!\n\n*tilts head curiously* What can I help you with today?")
     
     def _setup_shortcuts(self):
         """Set up keyboard shortcuts."""
-        # Cmd+Enter to send
         shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
         shortcut.activated.connect(self._on_send)
     
-    def _apply_macos_style(self):
-        """Apply native macOS styling."""
+    def _apply_style(self):
+        """Apply chatbot styling."""
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #FFFFFF;
             }
+            
+            #header {
+                background-color: #F8F9FA;
+                border-bottom: 1px solid #E5E5EA;
+            }
+            
+            #titleLabel {
+                font-size: 18px;
+                font-weight: 600;
+                color: #1C1C1E;
+            }
+            
+            #statusLabel {
+                font-size: 12px;
+                color: #34C759;
+            }
+            
+            #searchToggle {
+                font-size: 13px;
+                color: #3C3C43;
+                padding: 8px 12px;
+                background-color: #E5E5EA;
+                border-radius: 16px;
+            }
+            
+            #searchToggle:checked {
+                background-color: #34C759;
+                color: white;
+            }
+            
+            #chatArea {
+                background-color: #FFFFFF;
+                border: none;
+                padding: 20px;
+            }
+            
+            #inputFrame {
+                background-color: #F8F9FA;
+                border-top: 1px solid #E5E5EA;
+            }
+            
+            #inputField {
+                background-color: #FFFFFF;
+                border: 2px solid #E5E5EA;
+                border-radius: 22px;
+                padding: 12px 18px;
+                font-size: 15px;
+                color: #1C1C1E;
+            }
+            
+            #inputField:focus {
+                border-color: #007AFF;
+            }
+            
+            #sendButton {
+                background-color: #007AFF;
+                color: white;
+                border: none;
+                border-radius: 22px;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            
+            #sendButton:hover {
+                background-color: #0056CC;
+            }
+            
+            #sendButton:pressed {
+                background-color: #004499;
+            }
+            
+            #sendButton:disabled {
+                background-color: #C7C7CC;
+            }
         """)
         
-        # Use system font
-        font = QFont("SF Pro", 14)
+        font = QFont(".AppleSystemUIFont", 14)
         self.setFont(font)
     
-    def _append_message(self, role: str, content: str):
-        """Append a message to the chat area."""
+    def _add_user_message(self, text: str):
+        """Add a user message bubble."""
         cursor = self.chat_area.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         
-        if role == "user":
-            formatted = f'<div style="text-align: right; margin: 12px 0;"><span style="background-color: #007AFF; color: white; padding: 10px 16px; border-radius: 18px; display: inline-block; max-width: 80%;">{content}</span></div>'
-        else:
-            formatted = f'<div style="text-align: left; margin: 12px 0;"><span style="background-color: #E9E9EB; color: #1C1C1E; padding: 10px 16px; border-radius: 18px; display: inline-block; max-width: 80%;">{content}</span></div>'
-        
-        cursor.insertHtml(formatted)
-        cursor.insertText("\n")
+        html = f'''
+        <div style="text-align: right; margin: 8px 0; clear: both;">
+            <div style="display: inline-block; background-color: #007AFF; color: white; 
+                        padding: 12px 16px; border-radius: 18px 18px 4px 18px; 
+                        max-width: 75%; text-align: left; font-size: 14px;">
+                {text}
+            </div>
+        </div>
+        '''
+        cursor.insertHtml(html)
+        cursor.insertBlock()
         self.chat_area.setTextCursor(cursor)
         self.chat_area.ensureCursorVisible()
     
-    def _append_streaming_token(self, token: str):
-        """Append a streaming token to the current response."""
-        self.current_response += token
+    def _add_bot_message(self, text: str):
+        """Add a bot message bubble."""
+        cursor = self.chat_area.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
         
-        # Update the last message in the chat
+        # Convert newlines to <br>
+        text_html = text.replace('\n', '<br>')
+        
+        html = f'''
+        <div style="text-align: left; margin: 8px 0; clear: both;">
+            <span style="font-size: 20px; vertical-align: top;">🐕</span>
+            <div style="display: inline-block; background-color: #F0F0F5; color: #1C1C1E; 
+                        padding: 12px 16px; border-radius: 18px 18px 18px 4px; 
+                        max-width: 75%; margin-left: 8px; font-size: 14px;">
+                {text_html}
+            </div>
+        </div>
+        '''
+        cursor.insertHtml(html)
+        cursor.insertBlock()
+        self.chat_area.setTextCursor(cursor)
+        self.chat_area.ensureCursorVisible()
+    
+    def _start_bot_message(self):
+        """Start a streaming bot message."""
+        self.current_response = ""
+        self.is_streaming = True
+        cursor = self.chat_area.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        
+        html = '''
+        <div style="text-align: left; margin: 8px 0; clear: both;">
+            <span style="font-size: 20px; vertical-align: top;">🐕</span>
+            <span style="display: inline-block; background-color: #F0F0F5; color: #1C1C1E; 
+                        padding: 12px 16px; border-radius: 18px 18px 18px 4px; 
+                        max-width: 75%; margin-left: 8px; font-size: 14px;">
+        '''
+        cursor.insertHtml(html)
+        self.chat_area.setTextCursor(cursor)
+    
+    def _append_token(self, token: str):
+        """Append a token to the current streaming message."""
+        self.current_response += token
         cursor = self.chat_area.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         cursor.insertText(token)
         self.chat_area.setTextCursor(cursor)
         self.chat_area.ensureCursorVisible()
     
-    def _start_assistant_message(self):
-        """Start a new assistant message for streaming."""
-        self.current_response = ""
-        cursor = self.chat_area.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        cursor.insertHtml('<div style="text-align: left; margin: 12px 0;"><span style="background-color: #E9E9EB; color: #1C1C1E; padding: 10px 16px; border-radius: 18px; display: inline-block;">')
-        self.chat_area.setTextCursor(cursor)
-    
-    def _end_assistant_message(self):
-        """End the current assistant message."""
+    def _end_bot_message(self):
+        """End the streaming bot message."""
+        self.is_streaming = False
         cursor = self.chat_area.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         cursor.insertHtml('</span></div>')
-        cursor.insertText("\n")
+        cursor.insertBlock()
         self.chat_area.setTextCursor(cursor)
     
     def _on_send(self):
         """Handle send button click."""
         question = self.input_field.text().strip()
-        if not question:
+        if not question or self.is_streaming:
             return
         
-        # Disable input while processing
+        # Disable input
         self.input_field.setEnabled(False)
         self.send_button.setEnabled(False)
         self.input_field.clear()
         
         # Show user message
-        self._append_message("user", question)
+        self._add_user_message(question)
         
-        # Start worker thread
+        # Update status
+        if self.search_checkbox.isChecked():
+            self.status_label.setText("🔍 Searching...")
+            self.status_label.setStyleSheet("color: #FF9500;")
+        else:
+            self.status_label.setText("💭 Thinking...")
+            self.status_label.setStyleSheet("color: #FF9500;")
+        
+        # Start worker
         self.worker = WorkerThread(self.llm)
         self.worker.set_task(question, self.search_checkbox.isChecked())
         
@@ -300,30 +309,32 @@ class MainWindow(QMainWindow):
         self.worker.generation_complete.connect(self._on_generation_complete)
         self.worker.error_occurred.connect(self._on_error)
         
-        self._start_assistant_message()
+        self._start_bot_message()
         self.worker.start()
     
     def _on_status_update(self, status: str):
-        """Handle status updates from worker."""
+        """Handle status updates."""
         self.status_label.setText(status)
     
     def _on_token_generated(self, token: str):
-        """Handle streaming token from worker."""
-        self._append_streaming_token(token)
+        """Handle streaming token."""
+        self._append_token(token)
     
     def _on_generation_complete(self, response: str):
         """Handle generation completion."""
-        self._end_assistant_message()
-        self.status_label.setText("Ready")
+        self._end_bot_message()
+        self.status_label.setText("Online • Ready to chat")
+        self.status_label.setStyleSheet("color: #34C759;")
         self.input_field.setEnabled(True)
         self.send_button.setEnabled(True)
         self.input_field.setFocus()
     
     def _on_error(self, error: str):
-        """Handle errors from worker."""
-        self._end_assistant_message()
-        self._append_message("assistant", f"❌ Error: {error}")
-        self.status_label.setText("Error occurred")
+        """Handle errors."""
+        self._end_bot_message()
+        self._add_bot_message(f"*whimpers* 😢 Oops! Something went wrong:\n\n{error}\n\n*paws at you hopefully* Can we try again?")
+        self.status_label.setText("⚠️ Error occurred")
+        self.status_label.setStyleSheet("color: #FF3B30;")
         self.input_field.setEnabled(True)
         self.send_button.setEnabled(True)
         self.input_field.setFocus()

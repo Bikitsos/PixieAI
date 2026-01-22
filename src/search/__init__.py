@@ -4,7 +4,7 @@ Web Search Module
 Provides internet search capabilities using DuckDuckGo.
 """
 
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from typing import Optional
 
 from src.config import MAX_SEARCH_RESULTS
@@ -22,11 +22,10 @@ def search_web(query: str, max_results: int = MAX_SEARCH_RESULTS) -> list[dict]:
         List of search result dictionaries with 'title', 'href', and 'body' keys.
     """
     try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
-            return results
-    except Exception as e:
-        print(f"Search error: {e}")
+        ddgs = DDGS()
+        results = list(ddgs.text(query, max_results=max_results))
+        return results
+    except Exception:
         return []
 
 
@@ -69,7 +68,12 @@ def search_and_format(query: str, max_results: int = MAX_SEARCH_RESULTS) -> Opti
     Returns:
         Formatted search results string, or None if search failed.
     """
+    print(f"[DEBUG] search_and_format called with query: '{query}'")
     results = search_web(query, max_results)
+    print(f"[DEBUG] Got {len(results)} results from search_web")
     if results:
-        return format_search_results(results)
+        formatted = format_search_results(results)
+        print(f"[DEBUG] Formatted results length: {len(formatted)} chars")
+        return formatted
+    print("[DEBUG] No results, returning None")
     return None
