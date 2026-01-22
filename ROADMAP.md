@@ -38,10 +38,10 @@ uv add mlx-lm pyside6 duckduckgo-search
 
 ---
 
-## Phase 2: Model Selection & Memory Strategy
+## Phase 2: Model Selection & Memory Strategy ✅
 
 ### 2.1 Target Model
-- [ ] Select **`gemma-2-9b-it-4bit`** (4-bit quantized version)
+- [x] Select **`gemma-2-9b-it-4bit`** (4-bit quantized version)
 
 ### 2.2 Memory Budget
 
@@ -52,8 +52,8 @@ uv add mlx-lm pyside6 duckduckgo-search
 | **Total** | **< 16 GB** ✅ |
 
 ### 2.3 Verify Hardware Acceleration
-- [ ] Confirm MLX defaults to GPU (Metal) backend
-- [ ] CPU remains free for GUI and network tasks
+- [x] Confirm MLX defaults to GPU (Metal) backend
+- [x] CPU remains free for GUI and network tasks
 
 ---
 
@@ -190,7 +190,7 @@ PixieAI/
 | Phase | Status |
 |-------|--------|
 | Phase 1: Environment Setup | ✅ Complete |
-| Phase 2: Model Strategy | ⬜ Not Started |
+| Phase 2: Model Strategy | ✅ Complete |
 | Phase 3: Backend Logic | ⬜ Not Started |
 | Phase 4: GUI Architecture | ⬜ Not Started |
 | Phase 5: Integration | ⬜ Not Started |
