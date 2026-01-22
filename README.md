@@ -10,9 +10,17 @@ A local AI assistant for macOS powered by MLX and Gemma, with optional internet 
 
 - 🚀 **Fast Local Inference** - Runs Gemma 2 9B on Apple Silicon using MLX
 - 🔍 **Internet Search** - Optional DuckDuckGo integration for up-to-date answers
-- 🎨 **Native macOS UI** - Beautiful Qt-based interface with Apple styling
+- 🎨 **Native macOS UI** - Beautiful chatbot-style interface with message bubbles
 - 💾 **Memory Efficient** - 4-bit quantization fits in <16GB RAM
 - 🔒 **Private** - All processing happens locally on your Mac
+- ⚡ **Streaming** - Real-time token-by-token responses
+
+## Screenshots
+
+The app features a clean chatbot interface with:
+- Separate message bubbles for user and assistant
+- Status indicator (Online, Thinking, Searching)
+- Web Search toggle for internet-enhanced answers
 
 ## Requirements
 
@@ -25,7 +33,7 @@ A local AI assistant for macOS powered by MLX and Gemma, with optional internet 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/PixieAI.git
+git clone https://github.com/Bikitsos/PixieAI.git
 cd PixieAI
 
 # Install dependencies with uv
@@ -44,7 +52,7 @@ On first run, the app will download the Gemma model (~5-6GB). This only happens 
 ### Features
 
 - **Chat**: Type your question and press Enter or click Send
-- **Internet Search**: Toggle the checkbox to include web search results in responses
+- **Web Search**: Toggle to include DuckDuckGo search results in responses
 - **Streaming**: Responses appear token-by-token in real-time
 
 ## Project Structure
@@ -52,12 +60,14 @@ On first run, the app will download the Gemma model (~5-6GB). This only happens 
 ```
 PixieAI/
 ├── main.py              # Entry point
+├── assets/
+│   └── icon.png         # App icon
 ├── src/
 │   ├── app.py           # Application launcher
 │   ├── config.py        # Configuration settings
 │   ├── gui/
-│   │   ├── main_window.py   # Qt main window
-│   │   └── worker.py        # Background thread
+│   │   ├── main_window.py   # Chatbot UI with message bubbles
+│   │   └── worker.py        # Background thread for LLM
 │   ├── llm/
 │   │   └── wrapper.py       # MLX LLM wrapper
 │   └── search/
@@ -80,7 +90,7 @@ Edit `src/config.py` to customize:
 - **MLX** - Apple's ML framework for Apple Silicon
 - **Gemma 2 9B (4-bit)** - Google's efficient language model
 - **PyQt6** - Cross-platform GUI framework
-- **DuckDuckGo Search** - Privacy-focused web search
+- **ddgs** - DuckDuckGo search API
 
 ## License
 
