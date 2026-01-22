@@ -90,25 +90,25 @@ Please answer the question based on the context provided above.
 
 ---
 
-## Phase 4: GUI Architecture
+## Phase 4: GUI Architecture ✅
 
 ### 4.1 Interface Design
-- [ ] Main window with scrollable chat history
-- [ ] Input field for user prompts
-- [ ] "Enable Internet Search" toggle/checkbox
-- [ ] Send button
-- [ ] Status indicator (loading/generating)
+- [x] Main window with scrollable chat history
+- [x] Input field for user prompts
+- [x] "Enable Internet Search" toggle/checkbox
+- [x] Send button
+- [x] Status indicator (loading/generating)
 
 ### 4.2 Threading Implementation ⚠️ **CRITICAL**
 
 > **Warning:** LLMs are blocking operations. Running on main thread causes UI freeze (Spinning Beach Ball).
 
-- [ ] Create `QThread` Worker class
-- [ ] Worker handles:
+- [x] Create `QThread` Worker class
+- [x] Worker handles:
   - Web search (if enabled)
   - MLX generation
-- [ ] Implement signals to update UI from worker thread
-- [ ] Never block the main UI thread
+- [x] Implement signals to update UI from worker thread
+- [x] Never block the main UI thread
 
 **Architecture:**
 ```
@@ -120,42 +120,42 @@ Please answer the question based on the context provided above.
 
 ---
 
-## Phase 5: Integration & Execution
+## Phase 5: Integration & Execution ✅
 
 ### 5.1 Connect the Pipeline
-- [ ] On "Send" click → disable input button
-- [ ] Check search toggle:
+- [x] On "Send" click → disable input button
+- [x] Check search toggle:
   - **Yes:** Run search → Pass results + prompt to LLM
   - **No:** Pass prompt directly to LLM
 
 ### 5.2 Streaming Output
-- [ ] Set up MLX generation callback
-- [ ] Display tokens incrementally (typewriter effect)
-- [ ] Avoid bulk text dump at end
+- [x] Set up MLX generation callback
+- [x] Display tokens incrementally (typewriter effect)
+- [x] Avoid bulk text dump at end
 
 ### 5.3 Run Application
 ```bash
-uv run app.py
+uv run main.py
 ```
 
 ---
 
-## Phase 6: Optimization & Quality Checks
+## Phase 6: Optimization & Quality Checks ✅
 
 ### 6.1 Memory Monitoring
-- [ ] Open macOS Activity Monitor during generation
-- [ ] Verify Python process stays within **6-8 GB** range
-- [ ] Check for memory leaks during extended sessions
+- [x] Open macOS Activity Monitor during generation
+- [x] Verify Python process stays within **6-8 GB** range
+- [x] Check for memory leaks during extended sessions
 
 ### 6.2 Model Caching
-- [ ] Handle initial model download (~5-6 GB)
-- [ ] Show loading state in GUI during download
-- [ ] Prevent user thinking app has crashed
+- [x] Handle initial model download (~5-6 GB)
+- [x] Show loading state in GUI during download
+- [x] Prevent user thinking app has crashed
 
 ### 6.3 Error Handling
-- [ ] Network failures (search)
-- [ ] Model loading failures
-- [ ] Out of memory scenarios
+- [x] Network failures (search)
+- [x] Model loading failures
+- [x] Out of memory scenarios
 
 ---
 
@@ -192,16 +192,16 @@ PixieAI/
 | Phase 1: Environment Setup | ✅ Complete |
 | Phase 2: Model Strategy | ✅ Complete |
 | Phase 3: Backend Logic | ✅ Complete |
-| Phase 4: GUI Architecture | ⬜ Not Started |
-| Phase 5: Integration | ⬜ Not Started |
-| Phase 6: Optimization | ⬜ Not Started |
+| Phase 4: GUI Architecture | ✅ Complete |
+| Phase 5: Integration | ✅ Complete |
+| Phase 6: Optimization | ✅ Complete |
 
 ---
 
 ## 📚 Resources
 
 - [MLX LM Documentation](https://github.com/ml-explore/mlx-examples/tree/main/llms)
-- [PySide6 Documentation](https://doc.qt.io/qtforpython-6/)
+- [PyQt6 Documentation](https://www.riverbankcomputing.com/static/Docs/PyQt6/)
 - [DuckDuckGo Search](https://github.com/deedy5/duckduckgo_search)
 - [uv Package Manager](https://github.com/astral-sh/uv)
 
