@@ -10,7 +10,8 @@ from PyQt6.QtWidgets import (
     QLabel, QFrame, QScrollArea, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QKeySequence, QShortcut
+from PyQt6.QtGui import QFont, QKeySequence, QShortcut, QIcon
+import os
 
 from src.llm import LLMWrapper
 from src.gui.worker import WorkerThread
@@ -113,6 +114,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Pixie")
         self.setMinimumSize(500, 600)
         self.resize(600, 750)
+        
+        # Set window icon
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets", "icon.png")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
         
         # Initialize LLM (lazy loading)
         self.llm = LLMWrapper()

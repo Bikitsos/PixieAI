@@ -19,6 +19,7 @@ if os.path.exists(qt_plugin_path):
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 
 from src.gui import MainWindow
 
@@ -36,6 +37,11 @@ def main():
     app.setApplicationName("PixieAI")
     app.setApplicationDisplayName("PixieAI")
     app.setOrganizationName("PixieAI")
+    
+    # Set app icon (shows in Dock)
+    icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
     
     # Use native macOS style
     app.setStyle("macos")
