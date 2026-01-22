@@ -56,10 +56,17 @@ class MessageBubble(QFrame):
             layout.addWidget(bubble)
         else:
             # Bot message: left-aligned with avatar, gray bubble
-            avatar = QLabel("🐕")
-            avatar.setStyleSheet("font-size: 24px;")
-            avatar.setAlignment(Qt.AlignmentFlag.AlignTop)
-            layout.addWidget(avatar)
+            avatar = QLabel("P")
+            avatar.setFixedSize(28, 28)
+            avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            avatar.setStyleSheet("""
+                background-color: #8E44AD;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 14px;
+            """)
+            layout.addWidget(avatar, alignment=Qt.AlignmentFlag.AlignTop)
             
             bubble = QFrame()
             bubble.setObjectName("botBubble")
@@ -103,7 +110,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
-        self.setWindowTitle("Pixie 🐕")
+        self.setWindowTitle("Pixie")
         self.setMinimumSize(500, 600)
         self.resize(600, 750)
         
@@ -134,8 +141,16 @@ class MainWindow(QMainWindow):
         header_layout.setContentsMargins(20, 0, 20, 0)
         
         # Avatar and title
-        avatar_label = QLabel("🐕")
-        avatar_label.setStyleSheet("font-size: 32px;")
+        avatar_label = QLabel("P")
+        avatar_label.setFixedSize(40, 40)
+        avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        avatar_label.setStyleSheet("""
+            background-color: #8E44AD;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 20px;
+        """)
         header_layout.addWidget(avatar_label)
         
         title_layout = QVBoxLayout()
@@ -153,7 +168,7 @@ class MainWindow(QMainWindow):
         header_layout.addStretch()
         
         # Search toggle in header
-        self.search_checkbox = QCheckBox("🌐 Web Search")
+        self.search_checkbox = QCheckBox("Web Search")
         self.search_checkbox.setObjectName("searchToggle")
         header_layout.addWidget(self.search_checkbox)
         
@@ -196,7 +211,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(input_frame)
         
         # Welcome message
-        self._add_bot_message("*wags tail excitedly* 🐕✨\n\nWoof! Hi there, human! I'm Pixie, your adorable Yorkshire Terrier AI!\n\nI'm small but mighty - ask me anything and I'll fetch the best answer! Enable 🌐 Web Search for the latest info!\n\n*tilts head curiously* What can I help you with today?")
+        self._add_bot_message("Hi there! I'm Pixie, your friendly AI assistant.\n\nI'm here to help - ask me anything! Enable Web Search for the latest info.\n\nWhat can I help you with today?")
     
     def _setup_shortcuts(self):
         """Set up keyboard shortcuts."""
@@ -341,10 +356,10 @@ class MainWindow(QMainWindow):
         
         # Update status
         if self.search_checkbox.isChecked():
-            self.status_label.setText("🔍 Searching...")
+            self.status_label.setText("Searching...")
             self.status_label.setStyleSheet("color: #FF9500;")
         else:
-            self.status_label.setText("💭 Thinking...")
+            self.status_label.setText("Thinking...")
             self.status_label.setStyleSheet("color: #FF9500;")
         
         # Start worker
@@ -379,8 +394,8 @@ class MainWindow(QMainWindow):
     def _on_error(self, error: str):
         """Handle errors."""
         self._end_bot_message()
-        self._add_bot_message(f"*whimpers* 😢 Oops! Something went wrong:\n\n{error}\n\n*paws at you hopefully* Can we try again?")
-        self.status_label.setText("⚠️ Error occurred")
+        self._add_bot_message(f"Oops! Something went wrong:\n\n{error}\n\nPlease try again.")
+        self.status_label.setText("Error occurred")
         self.status_label.setStyleSheet("color: #FF3B30;")
         self.input_field.setEnabled(True)
         self.send_button.setEnabled(True)

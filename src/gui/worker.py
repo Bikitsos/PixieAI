@@ -41,18 +41,18 @@ class WorkerThread(QThread):
             
             # Perform web search if enabled
             if self.use_search:
-                self.status_update.emit("🔍 Searching the web...")
+                self.status_update.emit("Searching the web...")
                 context = search_and_format(self.question)
                 if context:
-                    self.status_update.emit("✅ Search complete. Generating response...")
+                    self.status_update.emit("Search complete. Generating response...")
                 else:
-                    self.status_update.emit("⚠️ No search results. Generating response...")
+                    self.status_update.emit("No search results. Generating response...")
             else:
-                self.status_update.emit("🤖 Generating response...")
+                self.status_update.emit("Generating response...")
             
             # Load model if not already loaded
             if not self.llm.is_loaded():
-                self.status_update.emit("📥 Loading model (first run may take a minute)...")
+                self.status_update.emit("Loading model (first run may take a minute)...")
                 self.llm.load()
             
             # Generate response with streaming
