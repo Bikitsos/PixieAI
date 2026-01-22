@@ -6,14 +6,93 @@ Native macOS-styled chatbot interface for PixieAI.
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QTextEdit, QLineEdit, QPushButton, QCheckBox,
+    QLineEdit, QPushButton, QCheckBox,
     QLabel, QFrame, QScrollArea, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QColor, QPalette, QKeySequence, QShortcut, QTextCursor
+from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 
 from src.llm import LLMWrapper
 from src.gui.worker import WorkerThread
+
+
+class MessageBubble(QFrame):
+    """A single chat message bubble."""
+    
+    def __init__(self, text: str, is_user: bool = False, parent=None):
+        super().__init__(parent)
+        self.is_user = is_user
+        self.label = None
+        self._setup_ui(text)
+    
+    def _setup_ui(self, text: str):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 4, 12, 4)
+        layout.setSpacing(8)
+        
+        if self.is_user:
+            # User message: right-aligned, blue bubble
+            layout.addStretch()
+            
+            bubble = QFrame()
+            bubble.setObjectName("userBubble")
+            bubble_layout = QVBoxLayout(bubble)
+            bubble_layout.setContentsMargins(14, 10, 14, 10)
+            
+            self.label = QLabel(text)
+            self.label.setWordWrap(True)
+            self.label.setTextFormat(Qt.TextFormat.PlainText)
+            self.label.setStyleSheet("color: white; font-size: 14px;")
+            bubble_layout.addWidget(self.label)
+            
+            bubble.setStyleSheet("""
+                QFrame#userBubble {
+                    background-color: #007AFF;
+                    border-radius: 18px;
+                    border-bottom-right-radius: 4px;
+                }
+            """)
+            bubble.setMaximumWidth(400)
+            layout.addWidget(bubble)
+        else:
+            # Bot message: left-aligned with avatar, gray bubble
+            avatar = QLabel("🐕")
+            avatar.setStyleSheet("font-size: 24px;")
+            avatar.setAlignment(Qt.AlignmentFlag.AlignTop)
+            layout.addWidget(avatar)
+            
+            bubble = QFrame()
+            bubble.setObjectName("botBubble")
+            bubble_layout = QVBoxLayout(bubble)
+            bubble_layout.setContentsMargins(14, 10, 14, 10)
+            
+            self.label = QLabel(text)
+            self.label.setWordWrap(True)
+            self.label.setTextFormat(Qt.TextFormat.PlainText)
+            self.label.setStyleSheet("color: #1C1C1E; font-size: 14px;")
+            bubble_layout.addWidget(self.label)
+            
+            bubble.setStyleSheet("""
+                QFrame#botBubble {
+                    background-color: #F0F0F5;
+                    border-radius: 18px;
+                    border-bottom-left-radius: 4px;
+                }
+            """)
+            bubble.setMaximumWidth(400)
+            layout.addWidget(bubble)
+            layout.addStretch()
+    
+    def append_text(self, text: str):
+        """Append text to the message (for streaming)."""
+        if self.label:
+            current = self.label.text()
+            self.label.setText(current + text)
+    
+    def set_text(self, text: str):
+        """Set the message text."""
+        if self.label:
+            self.label.setText(text)
 
 
 class MainWindow(QMainWindow):
@@ -31,7 +110,7 @@ class MainWindow(QMainWindow):
         # Initialize LLM (lazy loading)
         self.llm = LLMWrapper()
         self.worker = None
-        self.current_response = ""
+        self.current_bubble = None
         self.is_streaming = False
         
         self._setup_ui()
@@ -80,12 +159,20 @@ class MainWindow(QMainWindow):
         
         layout.addWidget(header)
         
-        # Chat area
-        self.chat_area = QTextEdit()
-        self.chat_area.setReadOnly(True)
-        self.chat_area.setObjectName("chatArea")
-        self.chat_area.setFont(QFont(".AppleSystemUIFont", 14))
-        layout.addWidget(self.chat_area, 1)
+        # Chat area - scroll area with message bubbles
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setObjectName("chatScrollArea")
+        
+        self.chat_container = QWidget()
+        self.chat_layout = QVBoxLayout(self.chat_container)
+        self.chat_layout.setContentsMargins(8, 16, 8, 16)
+        self.chat_layout.setSpacing(8)
+        self.chat_layout.addStretch()  # Push messages to top
+        
+        self.scroll_area.setWidget(self.chat_container)
+        layout.addWidget(self.scroll_area, 1)
         
         # Input area
         input_frame = QFrame()
@@ -152,10 +239,9 @@ class MainWindow(QMainWindow):
                 color: white;
             }
             
-            #chatArea {
+            #chatScrollArea {
                 background-color: #FFFFFF;
                 border: none;
-                padding: 20px;
             }
             
             #inputFrame {
@@ -201,82 +287,43 @@ class MainWindow(QMainWindow):
         font = QFont(".AppleSystemUIFont", 14)
         self.setFont(font)
     
+    def _scroll_to_bottom(self):
+        """Scroll chat to the bottom."""
+        QTimer.singleShot(10, lambda: self.scroll_area.verticalScrollBar().setValue(
+            self.scroll_area.verticalScrollBar().maximum()
+        ))
+    
     def _add_user_message(self, text: str):
         """Add a user message bubble."""
-        cursor = self.chat_area.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        
-        html = f'''
-        <div style="text-align: right; margin: 8px 0; clear: both;">
-            <div style="display: inline-block; background-color: #007AFF; color: white; 
-                        padding: 12px 16px; border-radius: 18px 18px 4px 18px; 
-                        max-width: 75%; text-align: left; font-size: 14px;">
-                {text}
-            </div>
-        </div>
-        '''
-        cursor.insertHtml(html)
-        cursor.insertBlock()
-        self.chat_area.setTextCursor(cursor)
-        self.chat_area.ensureCursorVisible()
+        bubble = MessageBubble(text, is_user=True)
+        # Insert before the stretch
+        self.chat_layout.insertWidget(self.chat_layout.count() - 1, bubble)
+        self._scroll_to_bottom()
     
     def _add_bot_message(self, text: str):
         """Add a bot message bubble."""
-        cursor = self.chat_area.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        
-        # Convert newlines to <br>
-        text_html = text.replace('\n', '<br>')
-        
-        html = f'''
-        <div style="text-align: left; margin: 8px 0; clear: both;">
-            <span style="font-size: 20px; vertical-align: top;">🐕</span>
-            <div style="display: inline-block; background-color: #F0F0F5; color: #1C1C1E; 
-                        padding: 12px 16px; border-radius: 18px 18px 18px 4px; 
-                        max-width: 75%; margin-left: 8px; font-size: 14px;">
-                {text_html}
-            </div>
-        </div>
-        '''
-        cursor.insertHtml(html)
-        cursor.insertBlock()
-        self.chat_area.setTextCursor(cursor)
-        self.chat_area.ensureCursorVisible()
+        bubble = MessageBubble(text, is_user=False)
+        # Insert before the stretch
+        self.chat_layout.insertWidget(self.chat_layout.count() - 1, bubble)
+        self._scroll_to_bottom()
     
     def _start_bot_message(self):
         """Start a streaming bot message."""
-        self.current_response = ""
         self.is_streaming = True
-        cursor = self.chat_area.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        
-        html = '''
-        <div style="text-align: left; margin: 8px 0; clear: both;">
-            <span style="font-size: 20px; vertical-align: top;">🐕</span>
-            <span style="display: inline-block; background-color: #F0F0F5; color: #1C1C1E; 
-                        padding: 12px 16px; border-radius: 18px 18px 18px 4px; 
-                        max-width: 75%; margin-left: 8px; font-size: 14px;">
-        '''
-        cursor.insertHtml(html)
-        self.chat_area.setTextCursor(cursor)
+        self.current_bubble = MessageBubble("", is_user=False)
+        self.chat_layout.insertWidget(self.chat_layout.count() - 1, self.current_bubble)
+        self._scroll_to_bottom()
     
     def _append_token(self, token: str):
         """Append a token to the current streaming message."""
-        self.current_response += token
-        cursor = self.chat_area.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        cursor.insertText(token)
-        self.chat_area.setTextCursor(cursor)
-        self.chat_area.ensureCursorVisible()
+        if self.current_bubble:
+            self.current_bubble.append_text(token)
+            self._scroll_to_bottom()
     
     def _end_bot_message(self):
         """End the streaming bot message."""
         self.is_streaming = False
-        cursor = self.chat_area.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        cursor.insertHtml('</span></div>')
-        cursor.insertBlock()
-        self.chat_area.setTextCursor(cursor)
+        self.current_bubble = None
     
     def _on_send(self):
         """Handle send button click."""
