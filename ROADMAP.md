@@ -57,26 +57,26 @@ uv add mlx-lm pyside6 duckduckgo-search
 
 ---
 
-## Phase 3: Backend Logic (The "Brain")
+## Phase 3: Backend Logic (The "Brain") ✅
 
 ### 3.1 Search Module
-- [ ] Create search function that accepts user query
-- [ ] Return top 3-5 results (limit to save context tokens)
-- [ ] Format results as structured string:
+- [x] Create search function that accepts user query
+- [x] Return top 3-5 results (limit to save context tokens)
+- [x] Format results as structured string:
   ```
   Title: [Title]
   Snippet: [Text]
   ```
 
 ### 3.2 LLM Wrapper Class
-- [ ] Initialize model using `mlx_lm.load()`
-- [ ] Create `generate()` function accepting:
+- [x] Initialize model using `mlx_lm.load()`
+- [x] Create `generate()` function accepting:
   - User prompt
   - Optional context string (from search)
 
 ### 3.3 Prompt Engineering
-- [ ] Design prompt template with search context injection
-- [ ] Instruct model to "answer based on the context provided"
+- [x] Design prompt template with search context injection
+- [x] Instruct model to "answer based on the context provided"
 
 **Example Prompt Template:**
 ```
@@ -191,7 +191,7 @@ PixieAI/
 |-------|--------|
 | Phase 1: Environment Setup | ✅ Complete |
 | Phase 2: Model Strategy | ✅ Complete |
-| Phase 3: Backend Logic | ⬜ Not Started |
+| Phase 3: Backend Logic | ✅ Complete |
 | Phase 4: GUI Architecture | ⬜ Not Started |
 | Phase 5: Integration | ⬜ Not Started |
 | Phase 6: Optimization | ⬜ Not Started |
