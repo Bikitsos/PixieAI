@@ -43,6 +43,8 @@ class MessageBubble(QFrame):
             self.label = QLabel(text)
             self.label.setWordWrap(True)
             self.label.setTextFormat(Qt.TextFormat.PlainText)
+            self.label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            self.label.setCursor(Qt.CursorShape.IBeamCursor)
             self.label.setStyleSheet("color: white; font-size: 14px;")
             bubble_layout.addWidget(self.label)
             
@@ -77,6 +79,8 @@ class MessageBubble(QFrame):
             self.label = QLabel(text)
             self.label.setWordWrap(True)
             self.label.setTextFormat(Qt.TextFormat.PlainText)
+            self.label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            self.label.setCursor(Qt.CursorShape.IBeamCursor)
             self.label.setStyleSheet("color: #1C1C1E; font-size: 14px;")
             bubble_layout.addWidget(self.label)
             
@@ -125,7 +129,10 @@ class MainWindow(QMainWindow):
         self.worker = None
         self.current_bubble = None
         self.current_question = ""
-        self.is_streaming = False
+        self.is_generating = False
+        self.model_ready = False
+        self.pending_response = ""  # Buffer for full response
+        self.typing_indicator = None
         
         self._setup_ui()
         self._setup_shortcuts()
@@ -173,6 +180,12 @@ class MainWindow(QMainWindow):
         
         header_layout.addLayout(title_layout)
         header_layout.addStretch()
+        
+        # New chat button to clear history
+        self.new_chat_button = QPushButton("New Chat")
+        self.new_chat_button.setObjectName("newChatButton")
+        self.new_chat_button.clicked.connect(self._on_new_chat)
+        header_layout.addWidget(self.new_chat_button)
         
         # Search toggle in header
         self.search_checkbox = QCheckBox("Web Search")
@@ -246,6 +259,24 @@ class MainWindow(QMainWindow):
             #statusLabel {
                 font-size: 12px;
                 color: #34C759;
+            }
+            
+            #newChatButton {
+                font-size: 13px;
+                color: white;
+                padding: 8px 16px;
+                background-color: #8E44AD;
+                border-radius: 16px;
+                border: none;
+                font-weight: 500;
+            }
+            
+            #newChatButton:hover {
+                background-color: #7D3C98;
+            }
+            
+            #newChatButton:disabled {
+                background-color: #C7C7CC;
             }
             
             #searchToggle {
@@ -329,28 +360,45 @@ class MainWindow(QMainWindow):
         self.chat_layout.insertWidget(self.chat_layout.count() - 1, bubble)
         self._scroll_to_bottom()
     
-    def _start_bot_message(self):
-        """Start a streaming bot message."""
-        self.is_streaming = True
-        self.current_bubble = MessageBubble("", is_user=False)
-        self.chat_layout.insertWidget(self.chat_layout.count() - 1, self.current_bubble)
+    def _show_typing_indicator(self):
+        """Show typing indicator below user message."""
+        self.typing_indicator = QFrame()
+        typing_layout = QHBoxLayout(self.typing_indicator)
+        typing_layout.setContentsMargins(48, 4, 12, 4)  # Indent to align with bot messages
+        
+        # Avatar
+        avatar = QLabel("P")
+        avatar.setFixedSize(28, 28)
+        avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        avatar.setStyleSheet("""
+            background-color: #8E44AD;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 14px;
+        """)
+        typing_layout.addWidget(avatar, alignment=Qt.AlignmentFlag.AlignTop)
+        
+        # Typing text
+        typing_label = QLabel("Typing...")
+        typing_label.setStyleSheet("color: #8E8E93; font-size: 13px; font-style: italic;")
+        typing_layout.addWidget(typing_label)
+        typing_layout.addStretch()
+        
+        # Insert before the stretch
+        self.chat_layout.insertWidget(self.chat_layout.count() - 1, self.typing_indicator)
         self._scroll_to_bottom()
     
-    def _append_token(self, token: str):
-        """Append a token to the current streaming message."""
-        if self.current_bubble:
-            self.current_bubble.append_text(token)
-            self._scroll_to_bottom()
-    
-    def _end_bot_message(self):
-        """End the streaming bot message."""
-        self.is_streaming = False
-        self.current_bubble = None
+    def _hide_typing_indicator(self):
+        """Hide and remove typing indicator."""
+        if self.typing_indicator:
+            self.typing_indicator.deleteLater()
+            self.typing_indicator = None
     
     def _on_send(self):
         """Handle send button click."""
         question = self.input_field.text().strip()
-        if not question or self.is_streaming:
+        if not question or self.is_generating:
             return
         
         # Store question for history
@@ -359,20 +407,26 @@ class MainWindow(QMainWindow):
         # Add user message to history
         self.llm.add_to_history("user", question)
         
-        # Disable input
+        # Disable input and buttons during generation
+        self.is_generating = True
+        self.pending_response = ""
         self.input_field.setEnabled(False)
         self.send_button.setEnabled(False)
+        self.new_chat_button.setEnabled(False)
         self.input_field.clear()
         
         # Show user message
         self._add_user_message(question)
+        
+        # Show typing indicator
+        self._show_typing_indicator()
         
         # Update status
         if self.search_checkbox.isChecked():
             self.status_label.setText("Searching...")
             self.status_label.setStyleSheet("color: #FF9500;")
         else:
-            self.status_label.setText("Thinking...")
+            self.status_label.setText("Typing...")
             self.status_label.setStyleSheet("color: #FF9500;")
         
         # Start worker
@@ -380,40 +434,70 @@ class MainWindow(QMainWindow):
         self.worker.set_task(question, self.search_checkbox.isChecked())
         
         self.worker.status_update.connect(self._on_status_update)
-        self.worker.token_generated.connect(self._on_token_generated)
+        self.worker.token_generated.connect(self._on_token_buffered)
         self.worker.generation_complete.connect(self._on_generation_complete)
         self.worker.error_occurred.connect(self._on_error)
         
-        self._start_bot_message()
         self.worker.start()
     
     def _on_status_update(self, status: str):
         """Handle status updates."""
         self.status_label.setText(status)
+        # Track when model is loaded
+        if "Model loaded" in status or "Generating" in status:
+            self.model_ready = True
     
-    def _on_token_generated(self, token: str):
-        """Handle streaming token."""
-        self._append_token(token)
+    def _on_token_buffered(self, token: str):
+        """Buffer tokens instead of streaming them."""
+        self.pending_response += token
     
     def _on_generation_complete(self, response: str):
-        """Handle generation completion."""
-        self._end_bot_message()
+        """Handle generation completion - show full response at once."""
+        # Hide typing indicator and show the complete response
+        self._hide_typing_indicator()
+        self._add_bot_message(response)
         
         # Add assistant response to history
         self.llm.add_to_history("assistant", response)
         
+        self.is_generating = False
+        self.model_ready = True
         self.status_label.setText("Online • Ready to chat")
         self.status_label.setStyleSheet("color: #34C759;")
         self.input_field.setEnabled(True)
         self.send_button.setEnabled(True)
+        self.new_chat_button.setEnabled(True)
         self.input_field.setFocus()
     
     def _on_error(self, error: str):
         """Handle errors."""
-        self._end_bot_message()
+        self._hide_typing_indicator()
+        self.is_generating = False
         self._add_bot_message(f"Oops! Something went wrong:\n\n{error}\n\nPlease try again.")
         self.status_label.setText("Error occurred")
         self.status_label.setStyleSheet("color: #FF3B30;")
         self.input_field.setEnabled(True)
         self.send_button.setEnabled(True)
+        self.new_chat_button.setEnabled(True)
+        self.input_field.setFocus()
+    
+    def _on_new_chat(self):
+        """Clear history and start a new chat session."""
+        if self.is_generating:
+            return
+        
+        # Clear LLM conversation history
+        self.llm.clear_history()
+        
+        # Remove all message bubbles except welcome
+        while self.chat_layout.count() > 1:  # Keep the stretch
+            item = self.chat_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Add welcome message again
+        self._add_bot_message("Hi there! I'm Pixie, your friendly AI assistant.\n\nI'm here to help - ask me anything! Enable Web Search for the latest info.\n\nWhat can I help you with today?")
+        
+        self.status_label.setText("Online • Ready to chat")
+        self.status_label.setStyleSheet("color: #34C759;")
         self.input_field.setFocus()
