@@ -15,6 +15,7 @@ import os
 
 from src.llm import LLMWrapper
 from src.gui.worker import WorkerThread
+from src.version import __version__
 
 
 class MessageBubble(QFrame):
@@ -170,9 +171,20 @@ class MainWindow(QMainWindow):
         title_layout = QVBoxLayout()
         title_layout.setSpacing(2)
         
+        # Title row with version
+        title_row = QHBoxLayout()
+        title_row.setSpacing(8)
+        
         title_label = QLabel("Pixie")
         title_label.setObjectName("titleLabel")
-        title_layout.addWidget(title_label)
+        title_row.addWidget(title_label)
+        
+        version_label = QLabel(f"v{__version__}")
+        version_label.setObjectName("versionLabel")
+        title_row.addWidget(version_label)
+        title_row.addStretch()
+        
+        title_layout.addLayout(title_row)
         
         self.status_label = QLabel("Online • Ready to chat")
         self.status_label.setObjectName("statusLabel")
@@ -254,6 +266,12 @@ class MainWindow(QMainWindow):
                 font-size: 18px;
                 font-weight: 600;
                 color: #1C1C1E;
+            }
+            
+            #versionLabel {
+                font-size: 11px;
+                color: #8E8E93;
+                padding-top: 4px;
             }
             
             #statusLabel {
